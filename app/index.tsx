@@ -1,12 +1,10 @@
 import { StyleSheet, Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
 
-export default function App() {
+export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Expense Tracker</Text>
       <Text style={styles.subtitle}>Coming soon — Phase 2 starts here.</Text>
-      <StatusBar style="auto" />
     </View>
   );
 }
