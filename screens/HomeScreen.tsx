@@ -203,6 +203,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.xl,
     marginTop: -spacing.lg,
+    paddingBottom: 100,
   },
   walletCard: {
     backgroundColor: colors.cardBg,

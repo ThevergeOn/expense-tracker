@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
@@ -16,39 +16,41 @@ const menuItems = [
 export default function AccountScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Account</Text>
-      </View>
-
-      <View style={styles.profileCard}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={40} color={colors.white} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Account</Text>
         </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>John Doe</Text>
-          <Text style={styles.profileEmail}>john.doe@email.com</Text>
-        </View>
-        <TouchableOpacity>
-          <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.menuContainer}>
-        {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem}>
-            <View style={[styles.menuIcon, { backgroundColor: item.color + "20" }]}>
-              <Ionicons name={item.icon as any} size={22} color={item.color} />
-            </View>
-            <Text style={styles.menuLabel}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        <View style={styles.profileCard}>
+          <View style={styles.avatar}>
+            <Ionicons name="person" size={40} color={colors.white} />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.profileName}>John Doe</Text>
+            <Text style={styles.profileEmail}>john.doe@email.com</Text>
+          </View>
+          <TouchableOpacity>
+            <Ionicons name="chevron-forward" size={24} color={colors.textMuted} />
           </TouchableOpacity>
-        ))}
-      </View>
+        </View>
 
-      <TouchableOpacity style={styles.logoutButton}>
-        <Ionicons name="log-out-outline" size={22} color={colors.expense} />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
+        <View style={styles.menuContainer}>
+          {menuItems.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.menuItem}>
+              <View style={[styles.menuIcon, { backgroundColor: item.color + "20" }]}>
+                <Ionicons name={item.icon as any} size={22} color={item.color} />
+              </View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color={colors.expense} />
+          <Text style={styles.logoutText}>Log Out</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -57,6 +59,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     paddingHorizontal: spacing.xl,
