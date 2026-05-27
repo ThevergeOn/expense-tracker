@@ -20,6 +20,10 @@ import { formatCurrency, getCurrentDate, formatShortDate } from "../utils/format
 import { Transaction } from "../types";
 import { categories } from "../data/mockCategories";
 
+interface HomeScreenProps {
+  onSeeAllPress?: () => void;
+}
+
 const Header = () => (
   <View style={styles.header}>
     <TouchableOpacity style={styles.iconButton}>
@@ -74,13 +78,18 @@ interface TransactionItemProps {
 const TransactionItem = ({ item }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
+  // Use custom icon/colors if available, otherwise fall back to category
+  const iconName = item.icon || category?.icon || "help-circle";
+  const iconColor = item.iconColor || category?.color || colors.textMuted;
+  const iconBg = item.iconBg || category?.bgColor || "#F3F4F6";
+
   return (
     <TouchableOpacity style={styles.transactionItem}>
-      <View style={[styles.transactionIcon, { backgroundColor: category?.bgColor || "#F3F4F6" }]}>
+      <View style={[styles.transactionIcon, { backgroundColor: iconBg }]}>
         <Ionicons
-          name={category?.icon as any || "help-circle"}
+          name={iconName as any}
           size={20}
-          color={category?.color || colors.textMuted}
+          color={iconColor}
         />
       </View>
       <View style={styles.transactionInfo}>
@@ -103,7 +112,7 @@ const TransactionItem = ({ item }: TransactionItemProps) => {
   );
 };
 
-export default function HomeScreen() {
+export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
   const recentTransactions = transactions
     .filter((t) => t.type === "expense")
     .slice(0, 4);
@@ -122,7 +131,7 @@ export default function HomeScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={onSeeAllPress}>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
         </View>

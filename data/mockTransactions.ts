@@ -8,6 +8,9 @@ export const transactions: Transaction[] = [
     amount: 4.99,
     date: "2023-07-15",
     type: "expense",
+    icon: "musical-notes",
+    iconColor: "#1DB954",
+    iconBg: "#E8F8EE",
   },
   {
     id: "2",
@@ -16,6 +19,9 @@ export const transactions: Transaction[] = [
     amount: 11.32,
     date: "2023-07-14",
     type: "expense",
+    icon: "card",
+    iconColor: "#10B981",
+    iconBg: "#D1FAE5",
   },
   {
     id: "3",
@@ -24,6 +30,9 @@ export const transactions: Transaction[] = [
     amount: 188,
     date: "2023-07-12",
     type: "expense",
+    icon: "cube",
+    iconColor: "#1F2937",
+    iconBg: "#F3F4F6",
   },
   {
     id: "4",
@@ -32,6 +41,9 @@ export const transactions: Transaction[] = [
     amount: 109,
     date: "2023-07-13",
     type: "expense",
+    icon: "color-palette",
+    iconColor: "#3B82F6",
+    iconBg: "#DBEAFE",
   },
   {
     id: "5",
