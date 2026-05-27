@@ -36,5 +36,5 @@ export const colors = {
 };
 
 export const gradients = {
-  header: [colors.gradientStart, colors.gradientMid, colors.gradientEnd],
+  header: [colors.gradientStart, colors.gradientMid, colors.gradientEnd] as const,
 };
