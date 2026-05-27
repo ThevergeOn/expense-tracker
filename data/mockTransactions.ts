@@ -1,0 +1,105 @@
+import { Transaction } from "../types";
+
+export const transactions: Transaction[] = [
+  {
+    id: "1",
+    title: "Spotify Subscription",
+    category: "subscription",
+    amount: 4.99,
+    date: "2023-07-15",
+    type: "expense",
+  },
+  {
+    id: "2",
+    title: "Copay Balance Top up",
+    category: "other",
+    amount: 11.32,
+    date: "2023-07-14",
+    type: "expense",
+  },
+  {
+    id: "3",
+    title: "UI8 Subscription",
+    category: "subscription",
+    amount: 188,
+    date: "2023-07-12",
+    type: "expense",
+  },
+  {
+    id: "4",
+    title: "Freepik Subscription",
+    category: "subscription",
+    amount: 109,
+    date: "2023-07-13",
+    type: "expense",
+  },
+  {
+    id: "5",
+    title: "Grocery Shopping",
+    category: "groceries",
+    amount: 85.50,
+    date: "2023-07-10",
+    type: "expense",
+  },
+  {
+    id: "6",
+    title: "Salary",
+    category: "other",
+    amount: 5000,
+    date: "2023-07-01",
+    type: "income",
+  },
+  {
+    id: "7",
+    title: "Gas Station",
+    category: "car",
+    amount: 45.00,
+    date: "2023-07-08",
+    type: "expense",
+  },
+  {
+    id: "8",
+    title: "Netflix",
+    category: "subscription",
+    amount: 15.99,
+    date: "2023-07-05",
+    type: "expense",
+  },
+  {
+    id: "9",
+    title: "Gym Membership",
+    category: "gym",
+    amount: 50.00,
+    date: "2023-07-01",
+    type: "expense",
+  },
+  {
+    id: "10",
+    title: "Freelance Project",
+    category: "other",
+    amount: 1200,
+    date: "2023-07-20",
+    type: "income",
+  },
+  {
+    id: "11",
+    title: "Electric Bill",
+    category: "home",
+    amount: 120.00,
+    date: "2023-07-03",
+    type: "expense",
+  },
+  {
+    id: "12",
+    title: "Internet Bill",
+    category: "internet",
+    amount: 59.99,
+    date: "2023-07-02",
+    type: "expense",
+  },
+];
+
+export const thisMonthSpend = 313.31;
+export const lastMonthComparison = -67; // percentage below last month
+
+export const walletBalance = 5631.22;
