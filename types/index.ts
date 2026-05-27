@@ -22,6 +22,9 @@ export interface Transaction {
   amount: number;
   date: string;
   type: "income" | "expense";
+  icon?: string;
+  iconColor?: string;
+  iconBg?: string;
 }
 
 export interface Category {

@@ -41,7 +41,7 @@ export default function App() {
   const renderScreen = () => {
     switch (activeTab) {
       case "home":
-        return <HomeScreen />;
+        return <HomeScreen onSeeAllPress={() => setActiveTab("transaction")} />;
       case "transaction":
         return <TransactionScreen />;
       case "analytics":
@@ -49,7 +49,7 @@ export default function App() {
       case "account":
         return <AccountScreen />;
       default:
-        return <HomeScreen />;
+        return <HomeScreen onSeeAllPress={() => setActiveTab("transaction")} />;
     }
   };
 
