@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { transactions } from "../data";
 import { formatCurrency, formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
 import { categories } from "../data/mockCategories";
+
+type FilterType = "all" | "income" | "expense";
 
 interface TransactionItemProps {
   item: Transaction;
@@ -56,18 +58,56 @@ const TransactionItem = ({ item }: TransactionItemProps) => {
 };
 
 export default function TransactionScreen() {
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+
+  const filteredTransactions = useMemo(() => {
+    if (activeFilter === "all") return transactions;
+    return transactions.filter((t) => t.type === activeFilter);
+  }, [activeFilter]);
+
+  const FilterButton = ({ filter, label }: { filter: FilterType; label: string }) => (
+    <TouchableOpacity
+      style={[
+        styles.filterButton,
+        activeFilter === filter && styles.filterButtonActive,
+      ]}
+      onPress={() => setActiveFilter(filter)}
+    >
+      <Text
+        style={[
+          styles.filterButtonText,
+          activeFilter === filter && styles.filterButtonTextActive,
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Transactions</Text>
       </View>
 
+      <View style={styles.filterContainer}>
+        <FilterButton filter="all" label="All" />
+        <FilterButton filter="income" label="Income" />
+        <FilterButton filter="expense" label="Expense" />
+      </View>
+
       <FlatList
-        data={transactions}
+        data={filteredTransactions}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <TransactionItem item={item} />}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyText}>No transactions found</Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -87,9 +127,42 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
   },
+  filterContainer: {
+    flexDirection: "row",
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  filterButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
+    backgroundColor: colors.cardBg,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primary,
+  },
+  filterButtonText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.textSecondary,
+  },
+  filterButtonTextActive: {
+    color: "#FFFFFF",
+  },
   list: {
     paddingHorizontal: spacing.xl,
     paddingBottom: 100,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing["3xl"],
+  },
+  emptyText: {
+    fontSize: typography.sizes.md,
+    color: colors.textMuted,
+    marginTop: spacing.md,
   },
   transactionItem: {
     flexDirection: "row",
