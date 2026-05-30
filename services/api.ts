@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://192.168.1.108:3000/api";
+const API_BASE_URL = "https://expense-tracker-backend-bdj4.onrender.com/api";
 
 interface ApiResponse<T> {
   data?: T;
