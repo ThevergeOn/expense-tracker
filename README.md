@@ -2,6 +2,20 @@
 
 A modern, full-featured expense tracking mobile application built with React Native and Expo.
 
+[![Build APK](https://github.com/ThevergeOn/expense-tracker/actions/workflows/build-apk.yml/badge.svg)](https://github.com/ThevergeOn/expense-tracker/actions/workflows/build-apk.yml)
+
+## Download APK
+
+### Latest Release
+Download the latest APK from the [Releases](https://github.com/ThevergeOn/expense-tracker/releases) page.
+
+### Installation on Android
+1. Download the `.apk` file from releases
+2. On your Android device, go to **Settings > Security**
+3. Enable **Install from unknown sources** (or allow your browser)
+4. Open the downloaded APK file
+5. Tap **Install**
+
 ## Features
 
 ### Transaction Management
@@ -227,6 +241,41 @@ export const colors = {
 ### Adding New Categories
 
 Add categories in your backend or update the default categories in `TransactionFormModal.tsx`.
+
+## Building APK
+
+### Prerequisites
+- EAS CLI installed (`npm install -g eas-cli`)
+- Expo account (free at [expo.dev](https://expo.dev))
+
+### Build Locally
+
+1. **Login to Expo**
+   ```bash
+   eas login
+   ```
+
+2. **Build APK locally**
+   ```bash
+   eas build --platform android --profile preview --local
+   ```
+
+3. **Or build on EAS servers**
+   ```bash
+   eas build --platform android --profile preview
+   ```
+
+### Automatic Builds
+
+APK is automatically built when you:
+- Push a tag starting with `v` (e.g., `v1.0.0`)
+- Manually trigger the workflow from GitHub Actions
+
+To create a release:
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ## Contributing
 
