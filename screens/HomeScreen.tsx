@@ -1,24 +1,19 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, spacing, typography } from "../theme";
-import {
-  transactions,
-  thisMonthSpend,
-  lastMonthComparison,
-  walletBalance,
-} from "../data";
 import { formatCurrency, getCurrentDate, formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
-import { categories } from "../data/mockCategories";
+import { useTransactions, useCategories, useAnalytics } from "../hooks";
 
 interface HomeScreenProps {
   onSeeAllPress?: () => void;
@@ -39,24 +34,28 @@ const Header = () => (
   </View>
 );
 
-const SpendingSummary = () => (
+interface SpendingSummaryProps {
+  totalExpenses: number;
+  loading: boolean;
+}
+
+const SpendingSummary = ({ totalExpenses, loading }: SpendingSummaryProps) => (
   <View style={styles.spendingContainer}>
     <Text style={styles.spendingLabel}>This Month Spend</Text>
-    <Text style={styles.spendingAmount}>{formatCurrency(thisMonthSpend)}</Text>
-    <View style={styles.comparisonContainer}>
-      <Ionicons
-        name={lastMonthComparison < 0 ? "trending-down" : "trending-up"}
-        size={16}
-        color={lastMonthComparison < 0 ? colors.income : colors.expense}
-      />
-      <Text style={styles.comparisonText}>
-        {Math.abs(lastMonthComparison)}% {lastMonthComparison < 0 ? "below" : "above"} last month
-      </Text>
-    </View>
+    {loading ? (
+      <ActivityIndicator size="small" color={colors.textPrimary} />
+    ) : (
+      <Text style={styles.spendingAmount}>{formatCurrency(totalExpenses)}</Text>
+    )}
   </View>
 );
 
-const WalletCard = () => (
+interface WalletCardProps {
+  balance: number;
+  loading: boolean;
+}
+
+const WalletCard = ({ balance, loading }: WalletCardProps) => (
   <TouchableOpacity style={styles.walletCard}>
     <View style={styles.walletLeft}>
       <View style={styles.walletIconContainer}>
@@ -65,7 +64,11 @@ const WalletCard = () => (
       <Text style={styles.walletLabel}>Spending Wallet</Text>
     </View>
     <View style={styles.walletRight}>
-      <Text style={styles.walletBalance}>{formatCurrency(walletBalance)}</Text>
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.textPrimary} />
+      ) : (
+        <Text style={styles.walletBalance}>{formatCurrency(balance)}</Text>
+      )}
       <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
     </View>
   </TouchableOpacity>
@@ -73,12 +76,12 @@ const WalletCard = () => (
 
 interface TransactionItemProps {
   item: Transaction;
+  categories: { id: string; icon: string; color: string; bgColor: string }[];
 }
 
-const TransactionItem = ({ item }: TransactionItemProps) => {
+const TransactionItem = ({ item, categories }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
-  // Use custom icon/colors if available, otherwise fall back to category
   const iconName = item.icon || category?.icon || "help-circle";
   const iconColor = item.iconColor || category?.color || colors.textMuted;
   const iconBg = item.iconBg || category?.bgColor || "#F3F4F6";
@@ -86,11 +89,7 @@ const TransactionItem = ({ item }: TransactionItemProps) => {
   return (
     <TouchableOpacity style={styles.transactionItem}>
       <View style={[styles.transactionIcon, { backgroundColor: iconBg }]}>
-        <Ionicons
-          name={iconName as any}
-          size={20}
-          color={iconColor}
-        />
+        <Ionicons name={iconName as any} size={20} color={iconColor} />
       </View>
       <View style={styles.transactionInfo}>
         <Text style={styles.transactionTitle}>{item.title}</Text>
@@ -113,21 +112,29 @@ const TransactionItem = ({ item }: TransactionItemProps) => {
 };
 
 export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
-  const recentTransactions = transactions
-    .filter((t) => t.type === "expense")
-    .slice(0, 4);
+  const { transactions, loading: transactionsLoading } = useTransactions();
+  const { categories } = useCategories();
+  const { totalIncome, totalExpenses, loading: analyticsLoading } = useAnalytics();
+
+  const recentTransactions = useMemo(() => {
+    return transactions
+      .filter((t) => t.type === "expense")
+      .slice(0, 4);
+  }, [transactions]);
+
+  const walletBalance = totalIncome - totalExpenses;
 
   return (
     <View style={styles.root}>
       <LinearGradient colors={gradients.header} style={styles.gradient}>
         <SafeAreaView edges={["top"]} style={styles.safe}>
           <Header />
-          <SpendingSummary />
+          <SpendingSummary totalExpenses={totalExpenses} loading={analyticsLoading} />
         </SafeAreaView>
       </LinearGradient>
 
       <View style={styles.content}>
-        <WalletCard />
+        <WalletCard balance={walletBalance} loading={analyticsLoading} />
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -136,12 +143,25 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={recentTransactions}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <TransactionItem item={item} />}
-          scrollEnabled={false}
-        />
+        {transactionsLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={recentTransactions}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TransactionItem item={item} categories={categories} />
+            )}
+            scrollEnabled={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No recent transactions</Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </View>
   );
@@ -196,16 +216,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes["5xl"],
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
-  },
-  comparisonContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  comparisonText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
   },
   content: {
     flex: 1,
@@ -269,6 +279,18 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: typography.sizes.sm,
     color: colors.textSecondary,
+  },
+  loadingContainer: {
+    paddingVertical: spacing["2xl"],
+    alignItems: "center",
+  },
+  emptyContainer: {
+    paddingVertical: spacing.xl,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
   },
   transactionItem: {
     flexDirection: "row",

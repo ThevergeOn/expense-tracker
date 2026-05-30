@@ -2,17 +2,12 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../../theme";
+import { appInfo, socialLinks } from "../../data";
 import ModalHeader from "./ModalHeader";
 
 interface AboutModalProps {
   onClose: () => void;
 }
-
-const socialLinks = [
-  { id: "website", icon: "globe-outline", label: "Website", url: "https://expensetracker.com" },
-  { id: "twitter", icon: "logo-twitter", label: "Twitter", url: "https://twitter.com/expensetracker" },
-  { id: "instagram", icon: "logo-instagram", label: "Instagram", url: "https://instagram.com/expensetracker" },
-];
 
 export default function AboutModal({ onClose }: AboutModalProps) {
   const handleLinkPress = (url: string) => {
@@ -33,38 +28,25 @@ export default function AboutModal({ onClose }: AboutModalProps) {
           <Ionicons name="wallet" size={60} color={colors.primary} />
         </View>
 
-        <Text style={styles.appName}>Expense Tracker</Text>
-        <Text style={styles.version}>Version 1.0.0</Text>
+        <Text style={styles.appName}>{appInfo.name}</Text>
+        <Text style={styles.version}>Version {appInfo.version}</Text>
 
-        <Text style={styles.description}>
-          Your personal finance companion. Track expenses, manage budgets, and achieve your
-          financial goals with ease.
-        </Text>
+        <Text style={styles.description}>{appInfo.description}</Text>
 
         <View style={styles.featuresContainer}>
           <Text style={styles.featuresTitle}>Features</Text>
-          <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.income} />
-            <Text style={styles.featureText}>Track income and expenses</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.income} />
-            <Text style={styles.featureText}>Categorize transactions</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.income} />
-            <Text style={styles.featureText}>View detailed analytics</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Ionicons name="checkmark-circle" size={20} color={colors.income} />
-            <Text style={styles.featureText}>Set and manage budgets</Text>
-          </View>
+          {appInfo.features.map((feature, index) => (
+            <View key={index} style={styles.featureItem}>
+              <Ionicons name="checkmark-circle" size={20} color={colors.income} />
+              <Text style={styles.featureText}>{feature}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.socialContainer}>
           <Text style={styles.socialTitle}>Follow Us</Text>
           <View style={styles.socialLinks}>
-            {socialLinks.map((link) => (
+            {socialLinks.slice(0, 3).map((link) => (
               <TouchableOpacity
                 key={link.id}
                 style={styles.socialLink}
@@ -78,8 +60,7 @@ export default function AboutModal({ onClose }: AboutModalProps) {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.copyright}>© 2024 Expense Tracker</Text>
-          <Text style={styles.rights}>All rights reserved.</Text>
+          <Text style={styles.copyright}>{appInfo.copyright}</Text>
         </View>
       </ScrollView>
     </View>
@@ -176,10 +157,6 @@ const styles = StyleSheet.create({
   },
   copyright: {
     fontSize: typography.sizes.sm,
-    color: colors.textMuted,
-  },
-  rights: {
-    fontSize: typography.sizes.xs,
     color: colors.textMuted,
   },
 });

@@ -1,29 +1,30 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import { transactions } from "../data";
 import { formatCurrency, formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
-import { categories } from "../data/mockCategories";
+import { useTransactions, useCategories } from "../hooks";
 
 type FilterType = "all" | "income" | "expense";
 
 interface TransactionItemProps {
   item: Transaction;
+  categories: { id: string; icon: string; color: string; bgColor: string }[];
 }
 
-const TransactionItem = ({ item }: TransactionItemProps) => {
+const TransactionItem = ({ item, categories }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
-  // Use custom icon/colors if available, otherwise fall back to category
   const iconName = item.icon || category?.icon || "help-circle";
   const iconColor = item.iconColor || category?.color || colors.textMuted;
   const iconBg = item.iconBg || category?.bgColor || "#F3F4F6";
@@ -31,11 +32,7 @@ const TransactionItem = ({ item }: TransactionItemProps) => {
   return (
     <TouchableOpacity style={styles.transactionItem}>
       <View style={[styles.transactionIcon, { backgroundColor: iconBg }]}>
-        <Ionicons
-          name={iconName as any}
-          size={20}
-          color={iconColor}
-        />
+        <Ionicons name={iconName as any} size={20} color={iconColor} />
       </View>
       <View style={styles.transactionInfo}>
         <Text style={styles.transactionTitle}>{item.title}</Text>
@@ -59,11 +56,8 @@ const TransactionItem = ({ item }: TransactionItemProps) => {
 
 export default function TransactionScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-
-  const filteredTransactions = useMemo(() => {
-    if (activeFilter === "all") return transactions;
-    return transactions.filter((t) => t.type === activeFilter);
-  }, [activeFilter]);
+  const { transactions, loading, error, refetch } = useTransactions(activeFilter);
+  const { categories } = useCategories();
 
   const FilterButton = ({ filter, label }: { filter: FilterType; label: string }) => (
     <TouchableOpacity
@@ -84,6 +78,55 @@ export default function TransactionScreen() {
     </TouchableOpacity>
   );
 
+  const renderContent = () => {
+    if (loading && transactions.length === 0) {
+      return (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading transactions...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={styles.centerContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.textMuted} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={refetch}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={transactions}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <TransactionItem item={item} categories={categories} />
+        )}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={refetch}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
+            <Text style={styles.emptyText}>No transactions found</Text>
+          </View>
+        }
+      />
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -96,19 +139,7 @@ export default function TransactionScreen() {
         <FilterButton filter="expense" label="Expense" />
       </View>
 
-      <FlatList
-        data={filteredTransactions}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <TransactionItem item={item} />}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No transactions found</Text>
-          </View>
-        }
-      />
+      {renderContent()}
     </SafeAreaView>
   );
 }
@@ -153,6 +184,36 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.xl,
     paddingBottom: 100,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing["3xl"],
+  },
+  loadingText: {
+    fontSize: typography.sizes.md,
+    color: colors.textMuted,
+    marginTop: spacing.md,
+  },
+  errorText: {
+    fontSize: typography.sizes.md,
+    color: colors.expense,
+    marginTop: spacing.md,
+    textAlign: "center",
+    paddingHorizontal: spacing.xl,
+  },
+  retryButton: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
   },
   emptyContainer: {
     alignItems: "center",
