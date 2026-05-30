@@ -33,4 +33,8 @@ export const transactionService = {
   delete: async (id: string | number) => {
     return api.delete<{ success: boolean }>(`/transactions/${id}`);
   },
+
+  deleteAll: async () => {
+    return api.delete<{ success: boolean }>("/transactions");
+  },
 };

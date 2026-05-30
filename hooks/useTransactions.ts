@@ -12,6 +12,7 @@ interface UseTransactionsReturn {
   createTransaction: (input: TransactionInput) => Promise<boolean>;
   updateTransaction: (id: string, input: TransactionInput) => Promise<boolean>;
   deleteTransaction: (id: string) => Promise<boolean>;
+  deleteAllTransactions: () => Promise<boolean>;
 }
 
 export function useTransactions(filter: FilterType = "all"): UseTransactionsReturn {
@@ -69,6 +70,16 @@ export function useTransactions(filter: FilterType = "all"): UseTransactionsRetu
     return true;
   };
 
+  const deleteAllTransactions = async (): Promise<boolean> => {
+    const response = await transactionService.deleteAll();
+    if (response.error) {
+      setError(response.error);
+      return false;
+    }
+    await fetchTransactions();
+    return true;
+  };
+
   return {
     transactions,
     loading,
@@ -77,5 +88,6 @@ export function useTransactions(filter: FilterType = "all"): UseTransactionsRetu
     createTransaction,
     updateTransaction,
     deleteTransaction,
+    deleteAllTransactions,
   };
 }

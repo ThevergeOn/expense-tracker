@@ -8,36 +8,114 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { colors, spacing, typography } from "../theme";
-import { Category } from "../types";
+import { Category, CategoryType } from "../types";
+import { useTransactions, useCategories } from "../hooks";
+
+// Form state interface matching App.tsx
+interface TransactionFormState {
+  amount: string;
+  description: string;
+  transactionType: "expense" | "income";
+  selectedDate: Date;
+}
 
 interface AddTransactionScreenProps {
   onClose: () => void;
   onSelectCategory: () => void;
   selectedCategory: Category | null;
+  formState: TransactionFormState;
+  onFormChange: (updates: Partial<TransactionFormState>) => void;
 }
 
 export default function AddTransactionScreen({
   onClose,
   onSelectCategory,
   selectedCategory,
+  formState,
+  onFormChange,
 }: AddTransactionScreenProps) {
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [transactionType, setTransactionType] = useState<"expense" | "income">("expense");
+  const { amount, description, transactionType, selectedDate } = formState;
 
-  const handleSave = () => {
-    // TODO: Save transaction
-    console.log({
-      amount: parseFloat(amount),
-      description,
-      category: selectedCategory,
-      type: transactionType,
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { createTransaction } = useTransactions();
+  const { categories } = useCategories();
+
+  const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      onFormChange({ selectedDate: date });
+    }
+  };
+
+  const formatDisplayDate = (date: Date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return "Today";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    }
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     });
-    onClose();
+  };
+
+  const handleSave = async () => {
+    if (!amount) {
+      setError("Please enter an amount");
+      return;
+    }
+
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setError("Please enter a valid amount");
+      return;
+    }
+
+    if (!selectedCategory) {
+      setError("Please select a category");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    // Get category details from loaded categories or use selected
+    const categoryData = categories.find((c) => c.id === selectedCategory.id) || selectedCategory;
+
+    const success = await createTransaction({
+      title: description.trim() || selectedCategory.name,
+      amount: amountNum,
+      type: transactionType,
+      category: selectedCategory.id as CategoryType,
+      icon: categoryData.icon,
+      iconColor: categoryData.color,
+      iconBg: categoryData.bgColor,
+      date: selectedDate.toISOString(),
+    });
+
+    setSaving(false);
+
+    if (success) {
+      onClose();
+    } else {
+      setError("Failed to save transaction. Please try again.");
+    }
   };
 
   return (
@@ -57,6 +135,14 @@ export default function AddTransactionScreen({
               <View style={styles.placeholder} />
             </View>
 
+            {/* Error Message */}
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={20} color={colors.expense} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+
             {/* Transaction Type Toggle */}
             <View style={styles.toggleContainer}>
               <TouchableOpacity
@@ -64,8 +150,13 @@ export default function AddTransactionScreen({
                   styles.toggleButton,
                   transactionType === "expense" && styles.toggleButtonActive,
                 ]}
-                onPress={() => setTransactionType("expense")}
+                onPress={() => onFormChange({ transactionType: "expense" })}
               >
+                <Ionicons
+                  name="trending-down"
+                  size={18}
+                  color={transactionType === "expense" ? colors.white : colors.expense}
+                />
                 <Text
                   style={[
                     styles.toggleText,
@@ -80,8 +171,13 @@ export default function AddTransactionScreen({
                   styles.toggleButton,
                   transactionType === "income" && styles.toggleButtonActiveIncome,
                 ]}
-                onPress={() => setTransactionType("income")}
+                onPress={() => onFormChange({ transactionType: "income" })}
               >
+                <Ionicons
+                  name="trending-up"
+                  size={18}
+                  color={transactionType === "income" ? colors.white : colors.income}
+                />
                 <Text
                   style={[
                     styles.toggleText,
@@ -102,7 +198,7 @@ export default function AddTransactionScreen({
                 placeholderTextColor={colors.textMuted}
                 keyboardType="decimal-pad"
                 value={amount}
-                onChangeText={setAmount}
+                onChangeText={(text) => onFormChange({ amount: text })}
               />
             </View>
 
@@ -143,35 +239,64 @@ export default function AddTransactionScreen({
                 </View>
                 <TextInput
                   style={styles.descriptionInput}
-                  placeholder="Add description"
+                  placeholder="Add description (optional)"
                   placeholderTextColor={colors.textMuted}
                   value={description}
-                  onChangeText={setDescription}
+                  onChangeText={(text) => onFormChange({ description: text })}
                 />
               </View>
             </View>
 
             {/* Date Input */}
-            <TouchableOpacity style={styles.inputRow}>
+            <TouchableOpacity
+              style={styles.inputRow}
+              onPress={() => setShowDatePicker(true)}
+            >
               <View style={styles.inputLeft}>
-                <View style={styles.inputIcon}>
-                  <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
+                <View style={[styles.inputIcon, { backgroundColor: "#EFF6FF" }]}>
+                  <Ionicons name="calendar-outline" size={20} color={colors.primary} />
                 </View>
-                <Text style={styles.inputLabel}>Today</Text>
+                <Text style={styles.inputLabel}>{formatDisplayDate(selectedDate)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </TouchableOpacity>
+
+            {/* Date Picker */}
+            {showDatePicker && (
+              <View style={styles.datePickerContainer}>
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display={Platform.OS === "ios" ? "spinner" : "default"}
+                  onChange={handleDateChange}
+                  maximumDate={new Date()}
+                  style={styles.datePicker}
+                />
+                {Platform.OS === "ios" && (
+                  <TouchableOpacity
+                    style={styles.datePickerDoneButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerDoneText}>Done</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {/* Save Button */}
             <TouchableOpacity
               style={[
                 styles.saveButton,
-                (!amount || !selectedCategory) && styles.saveButtonDisabled,
+                (!amount || !selectedCategory || saving) && styles.saveButtonDisabled,
               ]}
               onPress={handleSave}
-              disabled={!amount || !selectedCategory}
+              disabled={!amount || !selectedCategory || saving}
             >
-              <Text style={styles.saveButtonText}>Save Transaction</Text>
+              {saving ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Transaction</Text>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -214,6 +339,21 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    marginHorizontal: spacing.xl,
+    padding: spacing.md,
+    borderRadius: 8,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: typography.sizes.sm,
+    color: colors.expense,
+  },
   toggleContainer: {
     flexDirection: "row",
     backgroundColor: colors.cardBg,
@@ -224,9 +364,12 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     flex: 1,
+    flexDirection: "row",
     paddingVertical: spacing.md,
     alignItems: "center",
+    justifyContent: "center",
     borderRadius: 10,
+    gap: spacing.xs,
   },
   toggleButtonActive: {
     backgroundColor: colors.expense,
@@ -295,6 +438,27 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: typography.sizes.md,
     color: colors.textPrimary,
+  },
+  datePickerContainer: {
+    backgroundColor: colors.cardBg,
+    marginHorizontal: spacing.xl,
+    borderRadius: 12,
+    marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  datePicker: {
+    height: 200,
+  },
+  datePickerDoneButton: {
+    alignItems: "center",
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.background,
+  },
+  datePickerDoneText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary,
   },
   saveButton: {
     backgroundColor: colors.primary,
