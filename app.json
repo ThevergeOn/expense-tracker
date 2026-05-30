@@ -32,8 +32,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "expense-tracker"
+        "projectId": "663a402a-6c5d-438e-8ec4-d4e722b75657"
       }
-    }
+    },
+    "owner": "thevergeon"
   }
 }
