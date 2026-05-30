@@ -5,15 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import { formatCurrency } from "../utils/formatters";
 import { MonthlyData } from "../types";
 import { useAnalytics } from "../hooks";
+import { useCurrency } from "../context";
+import { Skeleton, SkeletonAnalyticsChart } from "../components";
 
 interface BarChartProps {
   data: MonthlyData[];
@@ -46,7 +46,14 @@ const BarChart = ({ data, loading }: BarChartProps) => {
 
       {loading ? (
         <View style={styles.chartLoading}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <View style={styles.skeletonBars}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <View key={index} style={styles.skeletonBarGroup}>
+                <Skeleton width={12} height={60 + Math.random() * 60} borderRadius={4} />
+                <Skeleton width={12} height={40 + Math.random() * 40} borderRadius={4} />
+              </View>
+            ))}
+          </View>
         </View>
       ) : data.length === 0 ? (
         <View style={styles.chartEmpty}>
@@ -93,9 +100,10 @@ interface SummaryCardsProps {
   totalIncome: number;
   totalExpenses: number;
   loading: boolean;
+  formatAmount: (amount: number) => string;
 }
 
-const SummaryCards = ({ totalIncome, totalExpenses, loading }: SummaryCardsProps) => (
+const SummaryCards = ({ totalIncome, totalExpenses, loading, formatAmount }: SummaryCardsProps) => (
   <View style={styles.summaryContainer}>
     <View style={styles.summaryCard}>
       <View style={[styles.summaryIcon, { backgroundColor: "#DCFCE7" }]}>
@@ -103,9 +111,9 @@ const SummaryCards = ({ totalIncome, totalExpenses, loading }: SummaryCardsProps
       </View>
       <View>
         {loading ? (
-          <ActivityIndicator size="small" color={colors.income} />
+          <Skeleton width={80} height={20} />
         ) : (
-          <Text style={styles.summaryAmount}>{formatCurrency(totalIncome)}</Text>
+          <Text style={styles.summaryAmount}>{formatAmount(totalIncome)}</Text>
         )}
         <Text style={styles.summaryLabel}>Income</Text>
       </View>
@@ -116,9 +124,9 @@ const SummaryCards = ({ totalIncome, totalExpenses, loading }: SummaryCardsProps
       </View>
       <View>
         {loading ? (
-          <ActivityIndicator size="small" color={colors.expense} />
+          <Skeleton width={80} height={20} />
         ) : (
-          <Text style={styles.summaryAmount}>{formatCurrency(totalExpenses)}</Text>
+          <Text style={styles.summaryAmount}>{formatAmount(totalExpenses)}</Text>
         )}
         <Text style={styles.summaryLabel}>Expenses</Text>
       </View>
@@ -129,14 +137,26 @@ const SummaryCards = ({ totalIncome, totalExpenses, loading }: SummaryCardsProps
 interface HistorySectionProps {
   data: MonthlyData[];
   loading: boolean;
+  formatAmount: (amount: number) => string;
 }
 
-const HistorySection = ({ data, loading }: HistorySectionProps) => (
+const HistorySection = ({ data, loading, formatAmount }: HistorySectionProps) => (
   <View style={styles.historyContainer}>
     <Text style={styles.historyTitle}>History</Text>
     {loading ? (
-      <View style={styles.historyLoading}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View>
+        {Array.from({ length: 4 }).map((_, index) => (
+          <View key={index} style={styles.historySkeletonItem}>
+            <View>
+              <Skeleton width={40} height={12} />
+              <Skeleton width={60} height={16} style={{ marginTop: 4 }} />
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <Skeleton width={70} height={14} />
+              <Skeleton width={70} height={14} style={{ marginTop: 4 }} />
+            </View>
+          </View>
+        ))}
       </View>
     ) : data.length === 0 ? (
       <View style={styles.historyEmpty}>
@@ -150,8 +170,8 @@ const HistorySection = ({ data, loading }: HistorySectionProps) => (
             <Text style={styles.historyDate}>{item.month}</Text>
           </View>
           <View style={styles.historyAmounts}>
-            <Text style={styles.historyIncome}>+{formatCurrency(item.income)}</Text>
-            <Text style={styles.historyExpense}>-{formatCurrency(item.expense)}</Text>
+            <Text style={styles.historyIncome}>+{formatAmount(item.income)}</Text>
+            <Text style={styles.historyExpense}>-{formatAmount(item.expense)}</Text>
           </View>
         </View>
       ))
@@ -161,6 +181,7 @@ const HistorySection = ({ data, loading }: HistorySectionProps) => (
 
 export default function AnalyticsScreen() {
   const { monthlyData, totalIncome, totalExpenses, loading, error, refetch } = useAnalytics();
+  const { formatAmount } = useCurrency();
 
   if (error) {
     return (
@@ -198,8 +219,9 @@ export default function AnalyticsScreen() {
           totalIncome={totalIncome}
           totalExpenses={totalExpenses}
           loading={loading}
+          formatAmount={formatAmount}
         />
-        <HistorySection data={monthlyData} loading={loading} />
+        <HistorySection data={monthlyData} loading={loading} formatAmount={formatAmount} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -292,6 +314,19 @@ const styles = StyleSheet.create({
     height: 150,
     justifyContent: "center",
     alignItems: "center",
+  },
+  skeletonBars: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "flex-end",
+    width: "100%",
+    height: 120,
+    paddingHorizontal: spacing.md,
+  },
+  skeletonBarGroup: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 4,
   },
   chartEmpty: {
     height: 150,
@@ -398,6 +433,15 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   historyItem: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 12,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  historySkeletonItem: {
     backgroundColor: colors.cardBg,
     borderRadius: 12,
     padding: spacing.lg,

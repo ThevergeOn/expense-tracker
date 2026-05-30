@@ -11,9 +11,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, spacing, typography } from "../theme";
-import { formatCurrency, formatShortDate } from "../utils/formatters";
+import { formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
 import { useTransactions, useCategories, usePeriodAnalytics } from "../hooks";
+import { useCurrency } from "../context";
 import { PeriodType } from "../services";
 import { TransactionInput } from "../services";
 import {
@@ -22,6 +23,7 @@ import {
   DeleteConfirmModal,
 } from "../components/transaction";
 import DatePickerModal from "../components/DatePickerModal";
+import { SkeletonTransactionList, Skeleton } from "../components";
 
 interface HomeScreenProps {
   onSeeAllPress?: () => void;
@@ -98,9 +100,10 @@ interface TransactionItemProps {
   item: Transaction;
   categories: { id: string; icon: string; color: string; bgColor: string }[];
   onPress: () => void;
+  formatAmount: (amount: number) => string;
 }
 
-const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) => {
+const TransactionItem = ({ item, categories, onPress, formatAmount }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
   const iconName = item.icon || category?.icon || "help-circle";
@@ -124,7 +127,7 @@ const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) =>
           ]}
         >
           {item.type === "expense" ? "-" : "+"}
-          {formatCurrency(item.amount)}
+          {formatAmount(item.amount)}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </View>
@@ -144,6 +147,7 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
     deleteTransaction,
   } = useTransactions();
   const { categories } = useCategories();
+  const { formatAmount } = useCurrency();
 
   // Server-side period analytics
   const {
@@ -264,13 +268,19 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
           <View style={styles.spendingContainer}>
             <Text style={styles.spendingLabel}>{getPeriodLabel(selectedPeriod)}</Text>
             {analyticsLoading || transactionsLoading ? (
-              <ActivityIndicator size="small" color={colors.textPrimary} />
+              <Skeleton width={200} height={48} style={{ marginVertical: spacing.xs }} />
             ) : (
-              <Text style={styles.spendingAmount}>{formatCurrency(periodExpenses)}</Text>
+              <Text style={styles.spendingAmount}>{formatAmount(periodExpenses)}</Text>
             )}
             <View style={styles.incomeRow}>
-              <Text style={styles.incomeLabel}>Income: </Text>
-              <Text style={styles.incomeAmount}>{formatCurrency(periodIncome)}</Text>
+              {analyticsLoading || transactionsLoading ? (
+                <Skeleton width={120} height={16} />
+              ) : (
+                <>
+                  <Text style={styles.incomeLabel}>Income: </Text>
+                  <Text style={styles.incomeAmount}>{formatAmount(periodIncome)}</Text>
+                </>
+              )}
             </View>
           </View>
 
@@ -294,9 +304,7 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
         </View>
 
         {transactionsLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
+          <SkeletonTransactionList itemCount={5} />
         ) : (
           <FlatList
             data={lastTransactions}
@@ -306,6 +314,7 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
                 item={item}
                 categories={categories}
                 onPress={() => handleTransactionPress(item)}
+                formatAmount={formatAmount}
               />
             )}
             scrollEnabled={false}

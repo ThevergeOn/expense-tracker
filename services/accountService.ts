@@ -1,10 +1,23 @@
 import { api } from "./api";
-import {
-  UserProfile,
-  Currency,
-  Language,
-  PaymentMethod,
-} from "../data/mockAccount";
+
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
+export interface Language {
+  code: string;
+  name: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  type: "visa" | "mastercard" | "amex" | "discover";
+  last4: string;
+  expiry: string;
+  isDefault?: boolean;
+}
 
 export interface ApiUserProfile {
   id: number;
@@ -25,11 +38,6 @@ export interface UpdateProfileInput {
   currency?: string;
   language?: string;
   notifications?: boolean;
-}
-
-export interface UpdatePasswordInput {
-  currentPassword: string;
-  newPassword: string;
 }
 
 export interface PaymentMethodInput {

@@ -16,6 +16,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { colors, spacing, typography } from "../theme";
 import { Category, CategoryType } from "../types";
 import { useTransactions, useCategories } from "../hooks";
+import { useCurrency } from "../context";
 
 // Form state interface matching App.tsx
 interface TransactionFormState {
@@ -48,6 +49,7 @@ export default function AddTransactionScreen({
 
   const { createTransaction } = useTransactions();
   const { categories } = useCategories();
+  const { currencySymbol } = useCurrency();
 
   const handleDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === "android") {
@@ -191,7 +193,7 @@ export default function AddTransactionScreen({
 
             {/* Amount Input */}
             <View style={styles.amountContainer}>
-              <Text style={styles.currencySymbol}>$</Text>
+              <Text style={styles.currencySymbol}>{currencySymbol}</Text>
               <TextInput
                 style={styles.amountInput}
                 placeholder="0.00"

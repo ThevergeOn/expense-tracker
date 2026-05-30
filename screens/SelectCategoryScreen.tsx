@@ -10,8 +10,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import { categories } from "../data";
+import { useCategories } from "../hooks";
 import { Category } from "../types";
+import { SkeletonCategoryGrid } from "../components";
 
 interface SelectCategoryScreenProps {
   onClose: () => void;
@@ -23,6 +24,7 @@ export default function SelectCategoryScreen({
   onSelect,
 }: SelectCategoryScreenProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const { categories, loading } = useCategories();
 
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -69,15 +71,19 @@ export default function SelectCategoryScreen({
         </View>
 
         {/* Category Grid */}
-        <FlatList
-          data={filteredCategories}
-          keyExtractor={(item) => item.id}
-          renderItem={renderCategory}
-          numColumns={4}
-          contentContainerStyle={styles.grid}
-          columnWrapperStyle={styles.row}
-          showsVerticalScrollIndicator={false}
-        />
+        {loading ? (
+          <SkeletonCategoryGrid itemCount={12} />
+        ) : (
+          <FlatList
+            data={filteredCategories}
+            keyExtractor={(item) => item.id}
+            renderItem={renderCategory}
+            numColumns={4}
+            contentContainerStyle={styles.grid}
+            columnWrapperStyle={styles.row}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
       </SafeAreaView>
     </View>
   );
@@ -133,6 +139,11 @@ const styles = StyleSheet.create({
   grid: {
     paddingHorizontal: spacing.lg,
     paddingBottom: 100,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   row: {
     justifyContent: "space-between",
