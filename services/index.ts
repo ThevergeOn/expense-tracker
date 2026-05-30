@@ -5,5 +5,5 @@ export { analyticsService } from "./analyticsService";
 export { budgetService } from "./budgetService";
 
 export type { TransactionInput } from "./transactionService";
-export type { AnalyticsResponse } from "./analyticsService";
+export type { AnalyticsResponse, PeriodAnalyticsResponse, PeriodType } from "./analyticsService";
 export type { Budget } from "./budgetService";

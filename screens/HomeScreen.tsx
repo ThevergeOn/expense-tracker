@@ -11,74 +11,88 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, spacing, typography } from "../theme";
-import { formatCurrency, getCurrentDate, formatShortDate } from "../utils/formatters";
+import { formatCurrency, formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
-import { useTransactions, useCategories, useAnalytics } from "../hooks";
+import { useTransactions, useCategories, usePeriodAnalytics } from "../hooks";
+import { PeriodType } from "../services";
 import { TransactionInput } from "../services";
 import {
   TransactionDetailModal,
   TransactionFormModal,
   DeleteConfirmModal,
 } from "../components/transaction";
+import DatePickerModal from "../components/DatePickerModal";
 
 interface HomeScreenProps {
   onSeeAllPress?: () => void;
 }
 
-const Header = () => (
-  <View style={styles.header}>
-    <TouchableOpacity style={styles.iconButton}>
-      <Ionicons name="settings-outline" size={24} color={colors.textPrimary} />
-    </TouchableOpacity>
-    <View style={styles.dateContainer}>
-      <Ionicons name="calendar-outline" size={16} color={colors.textPrimary} />
-      <Text style={styles.dateText}>{getCurrentDate()}</Text>
-    </View>
-    <TouchableOpacity style={styles.iconButton}>
-      <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-    </TouchableOpacity>
-  </View>
-);
+// Helper functions for date UI
+const getStartOfWeek = (date: Date) => {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day;
+  d.setDate(diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
 
-interface SpendingSummaryProps {
-  totalExpenses: number;
-  loading: boolean;
-}
+const getEndOfWeek = (date: Date) => {
+  const d = getStartOfWeek(date);
+  d.setDate(d.getDate() + 6);
+  return d;
+};
 
-const SpendingSummary = ({ totalExpenses, loading }: SpendingSummaryProps) => (
-  <View style={styles.spendingContainer}>
-    <Text style={styles.spendingLabel}>This Month Spend</Text>
-    {loading ? (
-      <ActivityIndicator size="small" color={colors.textPrimary} />
-    ) : (
-      <Text style={styles.spendingAmount}>{formatCurrency(totalExpenses)}</Text>
-    )}
-  </View>
-);
+const navigateDate = (date: Date, period: PeriodType, direction: "prev" | "next") => {
+  const d = new Date(date);
+  const delta = direction === "next" ? 1 : -1;
 
-interface WalletCardProps {
-  balance: number;
-  loading: boolean;
-}
+  switch (period) {
+    case "daily":
+      d.setDate(d.getDate() + delta);
+      break;
+    case "weekly":
+      d.setDate(d.getDate() + delta * 7);
+      break;
+    case "monthly":
+      d.setMonth(d.getMonth() + delta);
+      break;
+    case "yearly":
+      d.setFullYear(d.getFullYear() + delta);
+      break;
+  }
+  return d;
+};
 
-const WalletCard = ({ balance, loading }: WalletCardProps) => (
-  <TouchableOpacity style={styles.walletCard}>
-    <View style={styles.walletLeft}>
-      <View style={styles.walletIconContainer}>
-        <Ionicons name="wallet-outline" size={20} color={colors.textPrimary} />
-      </View>
-      <Text style={styles.walletLabel}>Spending Wallet</Text>
-    </View>
-    <View style={styles.walletRight}>
-      {loading ? (
-        <ActivityIndicator size="small" color={colors.textPrimary} />
-      ) : (
-        <Text style={styles.walletBalance}>{formatCurrency(balance)}</Text>
-      )}
-      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-    </View>
-  </TouchableOpacity>
-);
+const formatDateLabel = (date: Date, period: PeriodType) => {
+  switch (period) {
+    case "daily":
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      if (date.toDateString() === today.toDateString()) return "Today";
+      if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
+      return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    case "weekly":
+      const start = getStartOfWeek(date);
+      const end = getEndOfWeek(date);
+      return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    case "monthly":
+      return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    case "yearly":
+      return date.getFullYear().toString();
+  }
+};
+
+const getPeriodLabel = (period: PeriodType) => {
+  switch (period) {
+    case "daily": return "Today's Spending";
+    case "weekly": return "This Week's Spending";
+    case "monthly": return "This Month's Spending";
+    case "yearly": return "This Year's Spending";
+  }
+};
 
 interface TransactionItemProps {
   item: Transaction;
@@ -119,6 +133,10 @@ const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) =>
 };
 
 export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("monthly");
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const {
     transactions,
     loading: transactionsLoading,
@@ -126,7 +144,13 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
     deleteTransaction,
   } = useTransactions();
   const { categories } = useCategories();
-  const { totalIncome, totalExpenses, loading: analyticsLoading } = useAnalytics();
+
+  // Server-side period analytics
+  const {
+    totalIncome: periodIncome,
+    totalExpenses: periodExpenses,
+    loading: analyticsLoading,
+  } = usePeriodAnalytics(selectedPeriod, selectedDate);
 
   // Modal states
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -135,13 +159,16 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
   const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const recentTransactions = useMemo(() => {
-    return transactions
-      .filter((t) => t.type === "expense")
-      .slice(0, 4);
+  // Get last 5 transactions (most recent, regardless of period filter)
+  const lastTransactions = useMemo(() => {
+    return [...transactions]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
   }, [transactions]);
 
-  const walletBalance = totalIncome - totalExpenses;
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+  };
 
   const handleTransactionPress = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
@@ -178,20 +205,89 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
     }
   };
 
+  const periods: PeriodType[] = ["daily", "weekly", "monthly", "yearly"];
+
   return (
     <View style={styles.root}>
       <LinearGradient colors={gradients.header} style={styles.gradient}>
         <SafeAreaView edges={["top"]} style={styles.safe}>
-          <Header />
-          <SpendingSummary totalExpenses={totalExpenses} loading={analyticsLoading} />
+          {/* Date Navigation Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => setSelectedDate(navigateDate(selectedDate, selectedPeriod, "prev"))}
+            >
+              <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.dateSelector}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.textPrimary} />
+              <Text style={styles.dateText}>{formatDateLabel(selectedDate, selectedPeriod)}</Text>
+              <Ionicons name="chevron-down" size={16} color={colors.textPrimary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => setSelectedDate(navigateDate(selectedDate, selectedPeriod, "next"))}
+            >
+              <Ionicons name="chevron-forward" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Period Filter Tabs */}
+          <View style={styles.periodContainer}>
+            {periods.map((period) => (
+              <TouchableOpacity
+                key={period}
+                style={[
+                  styles.periodButton,
+                  selectedPeriod === period && styles.periodButtonActive,
+                ]}
+                onPress={() => setSelectedPeriod(period)}
+              >
+                <Text
+                  style={[
+                    styles.periodText,
+                    selectedPeriod === period && styles.periodTextActive,
+                  ]}
+                >
+                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Spending Summary */}
+          <View style={styles.spendingContainer}>
+            <Text style={styles.spendingLabel}>{getPeriodLabel(selectedPeriod)}</Text>
+            {analyticsLoading || transactionsLoading ? (
+              <ActivityIndicator size="small" color={colors.textPrimary} />
+            ) : (
+              <Text style={styles.spendingAmount}>{formatCurrency(periodExpenses)}</Text>
+            )}
+            <View style={styles.incomeRow}>
+              <Text style={styles.incomeLabel}>Income: </Text>
+              <Text style={styles.incomeAmount}>{formatCurrency(periodIncome)}</Text>
+            </View>
+          </View>
+
         </SafeAreaView>
       </LinearGradient>
 
-      <View style={styles.content}>
-        <WalletCard balance={walletBalance} loading={analyticsLoading} />
+      {/* Custom Date Picker Modal */}
+      <DatePickerModal
+        visible={showDatePicker}
+        selectedDate={selectedDate}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={handleDateSelect}
+      />
 
+      <View style={styles.content}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <Text style={styles.sectionTitle}>Last Transactions</Text>
           <TouchableOpacity onPress={onSeeAllPress}>
             <Text style={styles.seeAllText}>See All</Text>
           </TouchableOpacity>
@@ -203,7 +299,7 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
           </View>
         ) : (
           <FlatList
-            data={recentTransactions}
+            data={lastTransactions}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TransactionItem
@@ -215,7 +311,8 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
             scrollEnabled={false}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No recent transactions</Text>
+                <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
+                <Text style={styles.emptyText}>No transactions yet</Text>
               </View>
             }
           />
@@ -269,10 +366,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   gradient: {
-    paddingBottom: spacing["2xl"],
+    paddingBottom: spacing.xl,
   },
   safe: {
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
   },
   header: {
     flexDirection: "row",
@@ -280,28 +377,57 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: spacing.md,
   },
-  iconButton: {
+  navButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: "rgba(255,255,255,0.3)",
     justifyContent: "center",
     alignItems: "center",
   },
-  dateContainer: {
+  dateSelector: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.3)",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 20,
     gap: spacing.xs,
   },
   dateText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.textPrimary,
+  },
+  periodContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.3)",
+    borderRadius: 12,
+    padding: 4,
+    marginTop: spacing.lg,
+  },
+  periodButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    borderRadius: 10,
+  },
+  periodButtonActive: {
+    backgroundColor: colors.white,
+  },
+  periodText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
+  },
+  periodTextActive: {
+    color: colors.primary,
+    fontWeight: typography.weights.semibold,
   },
   spendingContainer: {
     alignItems: "center",
-    marginTop: spacing["3xl"],
-    marginBottom: spacing.lg,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
   },
   spendingLabel: {
     fontSize: typography.sizes.sm,
@@ -313,58 +439,30 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
   },
+  incomeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: spacing.xs,
+  },
+  incomeLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+  },
+  incomeAmount: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.income,
+  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.xl,
-    marginTop: -spacing.lg,
     paddingBottom: 100,
-  },
-  walletCard: {
-    backgroundColor: colors.cardBg,
-    borderRadius: 16,
-    padding: spacing.lg,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  walletLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  walletIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  walletLabel: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.textPrimary,
-  },
-  walletRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  walletBalance: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.semibold,
-    color: colors.textPrimary,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: spacing["2xl"],
+    marginTop: spacing.lg,
     marginBottom: spacing.lg,
   },
   sectionTitle: {
@@ -381,12 +479,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyContainer: {
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing["2xl"],
     alignItems: "center",
   },
   emptyText: {
     fontSize: typography.sizes.sm,
     color: colors.textMuted,
+    marginTop: spacing.md,
   },
   transactionItem: {
     flexDirection: "row",
