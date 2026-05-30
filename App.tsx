@@ -15,13 +15,32 @@ import { Category } from "./types";
 
 type ModalScreen = "none" | "addTransaction" | "selectCategory";
 
+// Form state interface to preserve data across modal screens
+interface TransactionFormState {
+  amount: string;
+  description: string;
+  transactionType: "expense" | "income";
+  selectedDate: Date;
+}
+
+const initialFormState: TransactionFormState = {
+  amount: "",
+  description: "",
+  transactionType: "expense",
+  selectedDate: new Date(),
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabName>("home");
   const [modalScreen, setModalScreen] = useState<ModalScreen>("none");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [formState, setFormState] = useState<TransactionFormState>(initialFormState);
 
   const handleTabPress = (tab: TabName) => {
     if (tab === "add") {
+      // Reset form state when opening fresh
+      setFormState(initialFormState);
+      setSelectedCategory(null);
       setModalScreen("addTransaction");
       return;
     }
@@ -31,11 +50,21 @@ export default function App() {
   const handleCloseModal = () => {
     setModalScreen("none");
     setSelectedCategory(null);
+    setFormState(initialFormState);
   };
 
   const handleSelectCategory = (category: Category) => {
     setSelectedCategory(category);
     setModalScreen("addTransaction");
+  };
+
+  const handleGoToSelectCategory = () => {
+    // Form state is already preserved in App state
+    setModalScreen("selectCategory");
+  };
+
+  const handleFormChange = (updates: Partial<TransactionFormState>) => {
+    setFormState((prev) => ({ ...prev, ...updates }));
   };
 
   const renderScreen = () => {
@@ -59,8 +88,10 @@ export default function App() {
         return (
           <AddTransactionScreen
             onClose={handleCloseModal}
-            onSelectCategory={() => setModalScreen("selectCategory")}
+            onSelectCategory={handleGoToSelectCategory}
             selectedCategory={selectedCategory}
+            formState={formState}
+            onFormChange={handleFormChange}
           />
         );
       case "selectCategory":

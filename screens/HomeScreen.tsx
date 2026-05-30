@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,12 @@ import { colors, gradients, spacing, typography } from "../theme";
 import { formatCurrency, getCurrentDate, formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
 import { useTransactions, useCategories, useAnalytics } from "../hooks";
+import { TransactionInput } from "../services";
+import {
+  TransactionDetailModal,
+  TransactionFormModal,
+  DeleteConfirmModal,
+} from "../components/transaction";
 
 interface HomeScreenProps {
   onSeeAllPress?: () => void;
@@ -77,9 +83,10 @@ const WalletCard = ({ balance, loading }: WalletCardProps) => (
 interface TransactionItemProps {
   item: Transaction;
   categories: { id: string; icon: string; color: string; bgColor: string }[];
+  onPress: () => void;
 }
 
-const TransactionItem = ({ item, categories }: TransactionItemProps) => {
+const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
   const iconName = item.icon || category?.icon || "help-circle";
@@ -87,7 +94,7 @@ const TransactionItem = ({ item, categories }: TransactionItemProps) => {
   const iconBg = item.iconBg || category?.bgColor || "#F3F4F6";
 
   return (
-    <TouchableOpacity style={styles.transactionItem}>
+    <TouchableOpacity style={styles.transactionItem} onPress={onPress}>
       <View style={[styles.transactionIcon, { backgroundColor: iconBg }]}>
         <Ionicons name={iconName as any} size={20} color={iconColor} />
       </View>
@@ -112,9 +119,21 @@ const TransactionItem = ({ item, categories }: TransactionItemProps) => {
 };
 
 export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
-  const { transactions, loading: transactionsLoading } = useTransactions();
+  const {
+    transactions,
+    loading: transactionsLoading,
+    updateTransaction,
+    deleteTransaction,
+  } = useTransactions();
   const { categories } = useCategories();
   const { totalIncome, totalExpenses, loading: analyticsLoading } = useAnalytics();
+
+  // Modal states
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [formModalVisible, setFormModalVisible] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const recentTransactions = useMemo(() => {
     return transactions
@@ -123,6 +142,41 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
   }, [transactions]);
 
   const walletBalance = totalIncome - totalExpenses;
+
+  const handleTransactionPress = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setDetailModalVisible(true);
+  };
+
+  const handleEditPress = () => {
+    setDetailModalVisible(false);
+    setFormModalVisible(true);
+  };
+
+  const handleDeletePress = () => {
+    setDetailModalVisible(false);
+    setDeleteConfirmVisible(true);
+  };
+
+  const handleSaveTransaction = async (data: TransactionInput): Promise<boolean> => {
+    if (selectedTransaction) {
+      return await updateTransaction(selectedTransaction.id, data);
+    }
+    return false;
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedTransaction) return;
+
+    setDeleting(true);
+    const success = await deleteTransaction(selectedTransaction.id);
+    setDeleting(false);
+
+    if (success) {
+      setDeleteConfirmVisible(false);
+      setSelectedTransaction(null);
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -152,7 +206,11 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
             data={recentTransactions}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <TransactionItem item={item} categories={categories} />
+              <TransactionItem
+                item={item}
+                categories={categories}
+                onPress={() => handleTransactionPress(item)}
+              />
             )}
             scrollEnabled={false}
             ListEmptyComponent={
@@ -163,6 +221,44 @@ export default function HomeScreen({ onSeeAllPress }: HomeScreenProps) {
           />
         )}
       </View>
+
+      {/* Detail Modal */}
+      <TransactionDetailModal
+        visible={detailModalVisible}
+        transaction={selectedTransaction}
+        categories={categories}
+        onClose={() => {
+          setDetailModalVisible(false);
+          setSelectedTransaction(null);
+        }}
+        onEdit={handleEditPress}
+        onDelete={handleDeletePress}
+      />
+
+      {/* Edit Form Modal */}
+      <TransactionFormModal
+        visible={formModalVisible}
+        transaction={selectedTransaction}
+        categories={categories}
+        onClose={() => {
+          setFormModalVisible(false);
+          setSelectedTransaction(null);
+        }}
+        onSave={handleSaveTransaction}
+      />
+
+      {/* Delete Confirm Modal */}
+      <DeleteConfirmModal
+        visible={deleteConfirmVisible}
+        title="Delete Transaction"
+        message={`Are you sure you want to delete "${selectedTransaction?.title}"? This action cannot be undone.`}
+        loading={deleting}
+        onCancel={() => {
+          setDeleteConfirmVisible(false);
+          setSelectedTransaction(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
     </View>
   );
 }

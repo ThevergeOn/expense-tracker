@@ -14,15 +14,22 @@ import { colors, spacing, typography } from "../theme";
 import { formatCurrency, formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
 import { useTransactions, useCategories } from "../hooks";
+import { TransactionInput } from "../services";
+import {
+  TransactionDetailModal,
+  TransactionFormModal,
+  DeleteConfirmModal,
+} from "../components/transaction";
 
 type FilterType = "all" | "income" | "expense";
 
 interface TransactionItemProps {
   item: Transaction;
   categories: { id: string; icon: string; color: string; bgColor: string }[];
+  onPress: () => void;
 }
 
-const TransactionItem = ({ item, categories }: TransactionItemProps) => {
+const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
   const iconName = item.icon || category?.icon || "help-circle";
@@ -30,7 +37,7 @@ const TransactionItem = ({ item, categories }: TransactionItemProps) => {
   const iconBg = item.iconBg || category?.bgColor || "#F3F4F6";
 
   return (
-    <TouchableOpacity style={styles.transactionItem}>
+    <TouchableOpacity style={styles.transactionItem} onPress={onPress}>
       <View style={[styles.transactionIcon, { backgroundColor: iconBg }]}>
         <Ionicons name={iconName as any} size={20} color={iconColor} />
       </View>
@@ -56,8 +63,82 @@ const TransactionItem = ({ item, categories }: TransactionItemProps) => {
 
 export default function TransactionScreen() {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-  const { transactions, loading, error, refetch } = useTransactions(activeFilter);
+  const {
+    transactions,
+    loading,
+    error,
+    refetch,
+    createTransaction,
+    updateTransaction,
+    deleteTransaction,
+    deleteAllTransactions,
+  } = useTransactions(activeFilter);
   const { categories } = useCategories();
+
+  // Modal states
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [formModalVisible, setFormModalVisible] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleteAllConfirmVisible, setDeleteAllConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleTransactionPress = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setDetailModalVisible(true);
+  };
+
+  const handleAddPress = () => {
+    setEditingTransaction(null);
+    setFormModalVisible(true);
+  };
+
+  const handleEditPress = () => {
+    setEditingTransaction(selectedTransaction);
+    setDetailModalVisible(false);
+    setFormModalVisible(true);
+  };
+
+  const handleDeletePress = () => {
+    setDetailModalVisible(false);
+    setDeleteConfirmVisible(true);
+  };
+
+  const handleDeleteAllPress = () => {
+    setDeleteAllConfirmVisible(true);
+  };
+
+  const handleSaveTransaction = async (data: TransactionInput): Promise<boolean> => {
+    if (editingTransaction) {
+      return await updateTransaction(editingTransaction.id, data);
+    } else {
+      return await createTransaction(data);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedTransaction) return;
+
+    setDeleting(true);
+    const success = await deleteTransaction(selectedTransaction.id);
+    setDeleting(false);
+
+    if (success) {
+      setDeleteConfirmVisible(false);
+      setSelectedTransaction(null);
+    }
+  };
+
+  const handleConfirmDeleteAll = async () => {
+    setDeleting(true);
+    const success = await deleteAllTransactions();
+    setDeleting(false);
+
+    if (success) {
+      setDeleteAllConfirmVisible(false);
+    }
+  };
 
   const FilterButton = ({ filter, label }: { filter: FilterType; label: string }) => (
     <TouchableOpacity
@@ -105,7 +186,11 @@ export default function TransactionScreen() {
         data={transactions}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TransactionItem item={item} categories={categories} />
+          <TransactionItem
+            item={item}
+            categories={categories}
+            onPress={() => handleTransactionPress(item)}
+          />
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -121,6 +206,9 @@ export default function TransactionScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt-outline" size={48} color={colors.textMuted} />
             <Text style={styles.emptyText}>No transactions found</Text>
+            <TouchableOpacity style={styles.addFirstButton} onPress={handleAddPress}>
+              <Text style={styles.addFirstButtonText}>Add your first transaction</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -131,6 +219,19 @@ export default function TransactionScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Transactions</Text>
+        <View style={styles.headerActions}>
+          {transactions.length > 0 && (
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={handleDeleteAllPress}
+            >
+              <Ionicons name="trash-outline" size={22} color={colors.expense} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.addButton} onPress={handleAddPress}>
+            <Ionicons name="add" size={24} color={colors.white} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.filterContainer}>
@@ -140,6 +241,54 @@ export default function TransactionScreen() {
       </View>
 
       {renderContent()}
+
+      {/* Detail Modal */}
+      <TransactionDetailModal
+        visible={detailModalVisible}
+        transaction={selectedTransaction}
+        categories={categories}
+        onClose={() => {
+          setDetailModalVisible(false);
+          setSelectedTransaction(null);
+        }}
+        onEdit={handleEditPress}
+        onDelete={handleDeletePress}
+      />
+
+      {/* Add/Edit Form Modal */}
+      <TransactionFormModal
+        visible={formModalVisible}
+        transaction={editingTransaction}
+        categories={categories}
+        onClose={() => {
+          setFormModalVisible(false);
+          setEditingTransaction(null);
+        }}
+        onSave={handleSaveTransaction}
+      />
+
+      {/* Delete Single Transaction Confirm */}
+      <DeleteConfirmModal
+        visible={deleteConfirmVisible}
+        title="Delete Transaction"
+        message={`Are you sure you want to delete "${selectedTransaction?.title}"? This action cannot be undone.`}
+        loading={deleting}
+        onCancel={() => {
+          setDeleteConfirmVisible(false);
+          setSelectedTransaction(null);
+        }}
+        onConfirm={handleConfirmDelete}
+      />
+
+      {/* Delete All Confirm */}
+      <DeleteConfirmModal
+        visible={deleteAllConfirmVisible}
+        title="Delete All Transactions"
+        message={`Are you sure you want to delete all ${transactions.length} transactions? This action cannot be undone.`}
+        loading={deleting}
+        onCancel={() => setDeleteAllConfirmVisible(false)}
+        onConfirm={handleConfirmDeleteAll}
+      />
     </SafeAreaView>
   );
 }
@@ -150,6 +299,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
   },
@@ -157,6 +309,27 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes["2xl"],
     fontWeight: typography.weights.bold,
     color: colors.textPrimary,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
   },
   filterContainer: {
     flexDirection: "row",
@@ -224,6 +397,18 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.md,
     color: colors.textMuted,
     marginTop: spacing.md,
+  },
+  addFirstButton: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: 8,
+  },
+  addFirstButtonText: {
+    color: colors.white,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium,
   },
   transactionItem: {
     flexDirection: "row",
