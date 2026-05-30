@@ -1,17 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import {
-  totalIncome,
-  totalExpenses,
-  currencies,
-  languages,
-  paymentMethods,
-  defaultUserProfile,
-  appInfo,
-} from "../data";
+import { appInfo } from "../data";
+import { useAccount } from "../hooks";
 import {
   ProfileCard,
   AccountStats,
@@ -21,7 +14,6 @@ import {
   CurrencyModal,
   LanguageModal,
   ChangePasswordModal,
-  HelpSupportModal,
   TermsModal,
   PrivacyModal,
   AboutModal,
@@ -34,25 +26,27 @@ type ModalType =
   | "currency"
   | "language"
   | "password"
-  | "help"
   | "terms"
   | "privacy"
   | "about";
 
 export default function AccountScreen() {
   const [activeModal, setActiveModal] = useState<ModalType>("none");
-  const [profile, setProfile] = useState(defaultUserProfile);
-  const [selectedCurrency, setSelectedCurrency] = useState("USD");
-  const [selectedLanguage, setSelectedLanguage] = useState("en");
-  const [toggles, setToggles] = useState({
-    biometric: true,
-    notifications: true,
-    darkMode: false,
-  });
 
-  const handleToggle = (key: keyof typeof toggles) => {
-    setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const {
+    profile,
+    currencies,
+    languages,
+    paymentMethods,
+    selectedCurrency,
+    selectedLanguage,
+    totalIncome,
+    totalExpenses,
+    loading,
+    updateProfile,
+    updateCurrency,
+    updateLanguage,
+  } = useAccount();
 
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [
@@ -71,13 +65,26 @@ export default function AccountScreen() {
     return language ? language.name : "English";
   };
 
+  const handleSaveProfile = async (data: typeof profile) => {
+    await updateProfile(data);
+  };
+
+  const handleSelectCurrency = async (code: string) => {
+    await updateCurrency(code);
+  };
+
+  const handleSelectLanguage = async (code: string) => {
+    await updateLanguage(code);
+  };
+
   const renderModalContent = () => {
     switch (activeModal) {
       case "profile":
         return (
           <ProfileModal
+            key={`profile-${profile.name}-${profile.email}`}
             profile={profile}
-            onSave={setProfile}
+            onSave={handleSaveProfile}
             onClose={() => setActiveModal("none")}
           />
         );
@@ -91,25 +98,25 @@ export default function AccountScreen() {
       case "currency":
         return (
           <CurrencyModal
+            key={`currency-${selectedCurrency}`}
             currencies={currencies}
             selectedCurrency={selectedCurrency}
-            onSelect={setSelectedCurrency}
+            onSelect={handleSelectCurrency}
             onClose={() => setActiveModal("none")}
           />
         );
       case "language":
         return (
           <LanguageModal
+            key={`language-${selectedLanguage}`}
             languages={languages}
             selectedLanguage={selectedLanguage}
-            onSelect={setSelectedLanguage}
+            onSelect={handleSelectLanguage}
             onClose={() => setActiveModal("none")}
           />
         );
       case "password":
         return <ChangePasswordModal onClose={() => setActiveModal("none")} />;
-      case "help":
-        return <HelpSupportModal onClose={() => setActiveModal("none")} />;
       case "terms":
         return <TermsModal onClose={() => setActiveModal("none")} />;
       case "privacy":
@@ -176,36 +183,6 @@ export default function AccountScreen() {
             label="Change Password"
             color={colors.green}
             onPress={() => setActiveModal("password")}
-          />
-          <AccountMenuItem
-            icon="finger-print-outline"
-            label="Biometric Login"
-            color={colors.teal}
-            hasToggle
-            toggleValue={toggles.biometric}
-            onToggle={() => handleToggle("biometric")}
-            isLast
-          />
-        </View>
-
-        {/* Preferences */}
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.menuContainer}>
-          <AccountMenuItem
-            icon="notifications-outline"
-            label="Push Notifications"
-            color={colors.orange}
-            hasToggle
-            toggleValue={toggles.notifications}
-            onToggle={() => handleToggle("notifications")}
-          />
-          <AccountMenuItem
-            icon="moon-outline"
-            label="Dark Mode"
-            color={colors.indigo}
-            hasToggle
-            toggleValue={toggles.darkMode}
-            onToggle={() => handleToggle("darkMode")}
             isLast
           />
         </View>
@@ -213,12 +190,6 @@ export default function AccountScreen() {
         {/* Support */}
         <Text style={styles.sectionTitle}>Support</Text>
         <View style={styles.menuContainer}>
-          <AccountMenuItem
-            icon="help-circle-outline"
-            label="Help & Support"
-            color={colors.teal}
-            onPress={() => setActiveModal("help")}
-          />
           <AccountMenuItem
             icon="document-text-outline"
             label="Terms of Service"
