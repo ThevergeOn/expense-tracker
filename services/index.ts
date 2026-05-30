@@ -6,6 +6,6 @@ export { budgetService } from "./budgetService";
 export { accountService } from "./accountService";
 
 export type { TransactionInput } from "./transactionService";
-export type { AnalyticsResponse, PeriodAnalyticsResponse, PeriodType } from "./analyticsService";
+export type { AnalyticsResponse, PeriodAnalyticsResponse, PeriodType, CategoryBreakdown, CategoryAnalyticsResponse } from "./analyticsService";
 export type { Budget } from "./budgetService";
 export type { UpdateProfileInput, PaymentMethodInput, ApiUserProfile } from "./accountService";
