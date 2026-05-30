@@ -1,10 +1,15 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import { appInfo } from "../data";
 import { useAccount } from "../hooks";
+import { useCurrency } from "../context";
+import {
+  SkeletonProfileCard,
+  SkeletonStats,
+  SkeletonMenuSection,
+} from "../components";
 import {
   ProfileCard,
   AccountStats,
@@ -38,6 +43,7 @@ export default function AccountScreen() {
     currencies,
     languages,
     paymentMethods,
+    appInfo,
     selectedCurrency,
     selectedLanguage,
     totalIncome,
@@ -47,6 +53,8 @@ export default function AccountScreen() {
     updateCurrency,
     updateLanguage,
   } = useAccount();
+
+  const { setSelectedCurrency: setGlobalCurrency } = useCurrency();
 
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [
@@ -71,6 +79,7 @@ export default function AccountScreen() {
 
   const handleSelectCurrency = async (code: string) => {
     await updateCurrency(code);
+    setGlobalCurrency(code); // Sync with global currency context
   };
 
   const handleSelectLanguage = async (code: string) => {
@@ -122,11 +131,29 @@ export default function AccountScreen() {
       case "privacy":
         return <PrivacyModal onClose={() => setActiveModal("none")} />;
       case "about":
-        return <AboutModal onClose={() => setActiveModal("none")} />;
+        return <AboutModal appInfo={appInfo} onClose={() => setActiveModal("none")} />;
       default:
         return null;
     }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Account</Text>
+          </View>
+
+          <SkeletonProfileCard />
+          <SkeletonStats />
+          <SkeletonMenuSection itemCount={4} />
+          <SkeletonMenuSection itemCount={1} />
+          <SkeletonMenuSection itemCount={3} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -217,7 +244,7 @@ export default function AccountScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>Version {appInfo.version}</Text>
+        {appInfo && <Text style={styles.versionText}>Version {appInfo.version}</Text>}
       </ScrollView>
 
       <Modal

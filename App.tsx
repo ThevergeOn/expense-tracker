@@ -10,6 +10,7 @@ import {
   SelectCategoryScreen,
 } from "./screens";
 import { TabBar, TabName } from "./components";
+import { CurrencyProvider } from "./context";
 import { colors } from "./theme";
 import { Category } from "./types";
 
@@ -108,20 +109,22 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        {renderScreen()}
-        <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
+      <CurrencyProvider>
+        <View style={styles.container}>
+          {renderScreen()}
+          <TabBar activeTab={activeTab} onTabPress={handleTabPress} />
 
-        {/* Single Modal with dynamic content */}
-        <Modal
-          visible={modalScreen !== "none"}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={handleCloseModal}
-        >
-          {renderModalContent()}
-        </Modal>
-      </View>
+          {/* Single Modal with dynamic content */}
+          <Modal
+            visible={modalScreen !== "none"}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={handleCloseModal}
+          >
+            {renderModalContent()}
+          </Modal>
+        </View>
+      </CurrencyProvider>
     </SafeAreaProvider>
   );
 }

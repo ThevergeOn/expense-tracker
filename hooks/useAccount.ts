@@ -1,22 +1,27 @@
 import { useState, useEffect, useCallback } from "react";
-import { accountService, UpdateProfileInput, ApiUserProfile } from "../services/accountService";
-import { analyticsService } from "../services/analyticsService";
 import {
-  UserProfile,
+  accountService,
+  UpdateProfileInput,
   Currency,
   Language,
   PaymentMethod,
-  defaultUserProfile,
-  currencies as fallbackCurrencies,
-  languages as fallbackLanguages,
-  paymentMethods as fallbackPaymentMethods,
-} from "../data/mockAccount";
+  AppInfo
+} from "../services/accountService";
+import { analyticsService } from "../services/analyticsService";
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+}
 
 interface UseAccountReturn {
   profile: UserProfile;
   currencies: Currency[];
   languages: Language[];
   paymentMethods: PaymentMethod[];
+  appInfo: AppInfo | null;
   selectedCurrency: string;
   selectedLanguage: string;
   totalIncome: number;
@@ -30,11 +35,18 @@ interface UseAccountReturn {
   refetch: () => Promise<void>;
 }
 
+const defaultProfile: UserProfile = {
+  name: "",
+  email: "",
+  phone: "",
+};
+
 export function useAccount(): UseAccountReturn {
-  const [profile, setProfile] = useState<UserProfile>(defaultUserProfile);
-  const [currencies, setCurrencies] = useState<Currency[]>(fallbackCurrencies);
-  const [languages, setLanguages] = useState<Language[]>(fallbackLanguages);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(fallbackPaymentMethods);
+  const [profile, setProfile] = useState<UserProfile>(defaultProfile);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState("USD");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [totalIncome, setTotalIncome] = useState(0);
@@ -47,47 +59,54 @@ export function useAccount(): UseAccountReturn {
     setError(null);
 
     try {
-      // Fetch all data in parallel
+      // Fetch all data in parallel from backend
       const [
         profileRes,
         currenciesRes,
         languagesRes,
         paymentMethodsRes,
+        appInfoRes,
         analyticsRes,
       ] = await Promise.all([
         accountService.getProfile(),
         accountService.getCurrencies(),
         accountService.getLanguages(),
         accountService.getPaymentMethods(),
+        accountService.getAppInfo(),
         analyticsService.getMonthly(),
       ]);
 
-      // Update profile
+      // Update profile from backend
       if (profileRes.data) {
         const apiProfile = profileRes.data;
         setProfile({
-          name: apiProfile.name,
-          email: apiProfile.email,
-          phone: apiProfile.phone,
+          name: apiProfile.name || "",
+          email: apiProfile.email || "",
+          phone: apiProfile.phone || "",
           avatar: apiProfile.avatar,
         });
         setSelectedCurrency(apiProfile.currency || "USD");
         setSelectedLanguage(apiProfile.language || "en");
       }
 
-      // Update currencies
-      if (currenciesRes.data && currenciesRes.data.length > 0) {
+      // Update currencies from backend
+      if (currenciesRes.data) {
         setCurrencies(currenciesRes.data);
       }
 
-      // Update languages
-      if (languagesRes.data && languagesRes.data.length > 0) {
+      // Update languages from backend
+      if (languagesRes.data) {
         setLanguages(languagesRes.data);
       }
 
-      // Update payment methods
-      if (paymentMethodsRes.data && paymentMethodsRes.data.length > 0) {
+      // Update payment methods from backend
+      if (paymentMethodsRes.data) {
         setPaymentMethods(paymentMethodsRes.data);
+      }
+
+      // Update app info from backend
+      if (appInfoRes.data) {
+        setAppInfo(appInfoRes.data);
       }
 
       // Update stats from analytics
@@ -111,24 +130,20 @@ export function useAccount(): UseAccountReturn {
     if (response.data) {
       const apiProfile = response.data;
       setProfile({
-        name: apiProfile.name,
-        email: apiProfile.email,
-        phone: apiProfile.phone,
+        name: apiProfile.name || "",
+        email: apiProfile.email || "",
+        phone: apiProfile.phone || "",
         avatar: apiProfile.avatar,
       });
       return true;
     }
-    // Fallback: update locally if API fails
-    setProfile((prev) => ({ ...prev, ...data }));
-    return true;
+    return false;
   }, []);
 
   const updateCurrency = useCallback(async (code: string): Promise<boolean> => {
     const response = await accountService.updateProfile({ currency: code });
     if (response.error) {
-      // Fallback: update locally even if API fails
-      setSelectedCurrency(code);
-      return true;
+      return false;
     }
     setSelectedCurrency(code);
     return true;
@@ -137,9 +152,7 @@ export function useAccount(): UseAccountReturn {
   const updateLanguage = useCallback(async (code: string): Promise<boolean> => {
     const response = await accountService.updateProfile({ language: code });
     if (response.error) {
-      // Fallback: update locally even if API fails
-      setSelectedLanguage(code);
-      return true;
+      return false;
     }
     setSelectedLanguage(code);
     return true;
@@ -159,6 +172,7 @@ export function useAccount(): UseAccountReturn {
     currencies,
     languages,
     paymentMethods,
+    appInfo,
     selectedCurrency,
     selectedLanguage,
     totalIncome,

@@ -5,21 +5,22 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import { formatCurrency, formatShortDate } from "../utils/formatters";
+import { formatShortDate } from "../utils/formatters";
 import { Transaction } from "../types";
 import { useTransactions, useCategories } from "../hooks";
+import { useCurrency } from "../context";
 import { TransactionInput } from "../services";
 import {
   TransactionDetailModal,
   TransactionFormModal,
   DeleteConfirmModal,
 } from "../components/transaction";
+import { SkeletonTransactionList } from "../components";
 
 type FilterType = "all" | "income" | "expense";
 
@@ -27,9 +28,10 @@ interface TransactionItemProps {
   item: Transaction;
   categories: { id: string; icon: string; color: string; bgColor: string }[];
   onPress: () => void;
+  formatAmount: (amount: number) => string;
 }
 
-const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) => {
+const TransactionItem = ({ item, categories, onPress, formatAmount }: TransactionItemProps) => {
   const category = categories.find((c) => c.id === item.category);
 
   const iconName = item.icon || category?.icon || "help-circle";
@@ -53,7 +55,7 @@ const TransactionItem = ({ item, categories, onPress }: TransactionItemProps) =>
           ]}
         >
           {item.type === "expense" ? "-" : "+"}
-          {formatCurrency(item.amount)}
+          {formatAmount(item.amount)}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </View>
@@ -74,6 +76,7 @@ export default function TransactionScreen() {
     deleteAllTransactions,
   } = useTransactions(activeFilter);
   const { categories } = useCategories();
+  const { formatAmount } = useCurrency();
 
   // Modal states
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -162,9 +165,8 @@ export default function TransactionScreen() {
   const renderContent = () => {
     if (loading && transactions.length === 0) {
       return (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading transactions...</Text>
+        <View style={styles.skeletonContainer}>
+          <SkeletonTransactionList itemCount={8} />
         </View>
       );
     }
@@ -190,6 +192,7 @@ export default function TransactionScreen() {
             item={item}
             categories={categories}
             onPress={() => handleTransactionPress(item)}
+            formatAmount={formatAmount}
           />
         )}
         contentContainerStyle={styles.list}
@@ -364,10 +367,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: spacing["3xl"],
   },
-  loadingText: {
-    fontSize: typography.sizes.md,
-    color: colors.textMuted,
-    marginTop: spacing.md,
+  skeletonContainer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
   },
   errorText: {
     fontSize: typography.sizes.md,

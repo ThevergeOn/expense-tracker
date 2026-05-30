@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../../theme";
-import { formatCurrency } from "../../utils/formatters";
+import { useCurrency } from "../../context";
 
 interface AccountStatsProps {
   totalIncome: number;
@@ -10,6 +10,7 @@ interface AccountStatsProps {
 }
 
 export default function AccountStats({ totalIncome, totalExpenses }: AccountStatsProps) {
+  const { formatAmount } = useCurrency();
   const savings = totalIncome - totalExpenses;
 
   return (
@@ -20,7 +21,7 @@ export default function AccountStats({ totalIncome, totalExpenses }: AccountStat
         </View>
         <Text style={styles.statLabel}>Income</Text>
         <Text style={[styles.statAmount, { color: colors.income }]}>
-          {formatCurrency(totalIncome)}
+          {formatAmount(totalIncome)}
         </Text>
       </View>
 
@@ -32,7 +33,7 @@ export default function AccountStats({ totalIncome, totalExpenses }: AccountStat
         </View>
         <Text style={styles.statLabel}>Expenses</Text>
         <Text style={[styles.statAmount, { color: colors.expense }]}>
-          {formatCurrency(totalExpenses)}
+          {formatAmount(totalExpenses)}
         </Text>
       </View>
 
@@ -44,7 +45,7 @@ export default function AccountStats({ totalIncome, totalExpenses }: AccountStat
         </View>
         <Text style={styles.statLabel}>Savings</Text>
         <Text style={[styles.statAmount, { color: colors.blue }]}>
-          {formatCurrency(savings)}
+          {formatAmount(savings)}
         </Text>
       </View>
     </View>

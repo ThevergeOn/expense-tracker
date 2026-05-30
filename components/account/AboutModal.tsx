@@ -2,14 +2,23 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../../theme";
-import { appInfo, socialLinks } from "../../data";
+import { socialLinks } from "../../data";
 import ModalHeader from "./ModalHeader";
 
+interface AppInfo {
+  name: string;
+  version: string;
+  description: string;
+  copyright: string;
+  features: string[];
+}
+
 interface AboutModalProps {
+  appInfo: AppInfo | null;
   onClose: () => void;
 }
 
-export default function AboutModal({ onClose }: AboutModalProps) {
+export default function AboutModal({ appInfo, onClose }: AboutModalProps) {
   const handleLinkPress = (url: string) => {
     Linking.canOpenURL(url).then((supported) => {
       if (supported) {
@@ -19,6 +28,17 @@ export default function AboutModal({ onClose }: AboutModalProps) {
       }
     });
   };
+
+  if (!appInfo) {
+    return (
+      <View style={styles.container}>
+        <ModalHeader title="About" onClose={onClose} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -157,6 +177,15 @@ const styles = StyleSheet.create({
   },
   copyright: {
     fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: typography.sizes.md,
     color: colors.textMuted,
   },
 });

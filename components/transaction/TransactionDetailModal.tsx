@@ -10,8 +10,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../../theme";
-import { formatCurrency, formatShortDate } from "../../utils/formatters";
+import { formatShortDate } from "../../utils/formatters";
 import { Transaction, Category } from "../../types";
+import { useCurrency } from "../../context";
 
 interface TransactionDetailModalProps {
   visible: boolean;
@@ -30,6 +31,8 @@ export default function TransactionDetailModal({
   onEdit,
   onDelete,
 }: TransactionDetailModalProps) {
+  const { formatAmount } = useCurrency();
+
   if (!transaction) return null;
 
   const category = categories.find((c) => c.id === transaction.category);
@@ -66,7 +69,7 @@ export default function TransactionDetailModal({
               ]}
             >
               {transaction.type === "expense" ? "-" : "+"}
-              {formatCurrency(transaction.amount)}
+              {formatAmount(transaction.amount)}
             </Text>
           </View>
 

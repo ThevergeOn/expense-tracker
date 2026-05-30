@@ -17,6 +17,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { colors, spacing, typography } from "../../theme";
 import { Transaction, Category, CategoryType } from "../../types";
 import { TransactionInput } from "../../services";
+import { useCurrency } from "../../context";
 
 interface TransactionFormModalProps {
   visible: boolean;
@@ -34,6 +35,7 @@ export default function TransactionFormModal({
   onSave,
 }: TransactionFormModalProps) {
   const isEditing = !!transaction;
+  const { currencySymbol } = useCurrency();
 
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
@@ -234,7 +236,7 @@ export default function TransactionFormModal({
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Amount</Text>
               <View style={styles.amountInputContainer}>
-                <Text style={styles.currencySymbol}>$</Text>
+                <Text style={styles.currencySymbol}>{currencySymbol}</Text>
                 <TextInput
                   style={styles.amountInput}
                   value={amount}
