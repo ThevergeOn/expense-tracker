@@ -3,7 +3,15 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../theme";
-import { totalIncome, totalExpenses } from "../data";
+import {
+  totalIncome,
+  totalExpenses,
+  currencies,
+  languages,
+  paymentMethods,
+  defaultUserProfile,
+  appInfo,
+} from "../data";
 import {
   ProfileCard,
   AccountStats,
@@ -31,36 +39,9 @@ type ModalType =
   | "privacy"
   | "about";
 
-const currencies = [
-  { code: "USD", symbol: "$", name: "US Dollar" },
-  { code: "EUR", symbol: "€", name: "Euro" },
-  { code: "GBP", symbol: "£", name: "British Pound" },
-  { code: "JPY", symbol: "¥", name: "Japanese Yen" },
-  { code: "CAD", symbol: "$", name: "Canadian Dollar" },
-  { code: "AUD", symbol: "$", name: "Australian Dollar" },
-];
-
-const languages = [
-  { code: "en", name: "English" },
-  { code: "es", name: "Spanish" },
-  { code: "fr", name: "French" },
-  { code: "de", name: "German" },
-  { code: "zh", name: "Chinese" },
-  { code: "ja", name: "Japanese" },
-];
-
-const paymentMethods = [
-  { id: "1", type: "visa", last4: "4242", expiry: "12/25" },
-  { id: "2", type: "mastercard", last4: "8888", expiry: "06/26" },
-];
-
 export default function AccountScreen() {
   const [activeModal, setActiveModal] = useState<ModalType>("none");
-  const [profile, setProfile] = useState({
-    name: "John Doe",
-    email: "john.doe@email.com",
-    phone: "+1 234 567 8900",
-  });
+  const [profile, setProfile] = useState(defaultUserProfile);
   const [selectedCurrency, setSelectedCurrency] = useState("USD");
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [toggles, setToggles] = useState({
@@ -265,7 +246,7 @@ export default function AccountScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+        <Text style={styles.versionText}>Version {appInfo.version}</Text>
       </ScrollView>
 
       <Modal

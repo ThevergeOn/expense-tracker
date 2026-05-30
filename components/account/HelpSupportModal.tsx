@@ -2,46 +2,12 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, spacing, typography } from "../../theme";
+import { helpOptions, supportContact } from "../../data";
 import ModalHeader from "./ModalHeader";
 
 interface HelpSupportModalProps {
   onClose: () => void;
 }
-
-const helpOptions = [
-  {
-    id: "chat",
-    icon: "chatbubble-outline",
-    color: colors.blue,
-    title: "Live Chat",
-    subtitle: "Chat with our support team",
-    action: "chat",
-  },
-  {
-    id: "email",
-    icon: "mail-outline",
-    color: colors.green,
-    title: "Email Support",
-    subtitle: "support@expensetracker.com",
-    action: "email",
-  },
-  {
-    id: "phone",
-    icon: "call-outline",
-    color: colors.orange,
-    title: "Phone Support",
-    subtitle: "+1 (800) 123-4567",
-    action: "phone",
-  },
-  {
-    id: "faq",
-    icon: "book-outline",
-    color: colors.purple,
-    title: "FAQ",
-    subtitle: "Frequently asked questions",
-    action: "faq",
-  },
-];
 
 export default function HelpSupportModal({ onClose }: HelpSupportModalProps) {
   const handleOptionPress = (action: string) => {
@@ -50,10 +16,10 @@ export default function HelpSupportModal({ onClose }: HelpSupportModalProps) {
         Alert.alert("Live Chat", "Live chat feature coming soon!");
         break;
       case "email":
-        Linking.openURL("mailto:support@expensetracker.com");
+        Linking.openURL(`mailto:${supportContact.email}`);
         break;
       case "phone":
-        Linking.openURL("tel:+18001234567");
+        Linking.openURL(`tel:${supportContact.phone.replace(/\D/g, "")}`);
         break;
       case "faq":
         Alert.alert("FAQ", "FAQ section coming soon!");
